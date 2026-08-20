@@ -136,6 +136,10 @@ uv run --with cos-python-sdk-v5 --with dashscope --with requests --with python-d
 - 建议使用私有 COS bucket、最小权限凭据和短期签名 URL。
 - 不要提交 `transcripts/`、`.env`、Keychain 导出或任何媒体文件。
 
+## 社区
+
+本项目认可并链接 [LINUX DO 社区](https://linux.do)。
+
 ## 许可证
 
 MIT License
