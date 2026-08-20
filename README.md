@@ -9,11 +9,11 @@
 - 支持并发任务、说话人区分和时间戳对齐
 - 输出 JSON、可读 TXT、SRT 字幕和汇总报告
 - 支持 dry-run，仅检查媒体和估算费用，不上传文件
-- 凭据从 macOS Keychain 读取，不把密钥写入命令行或代码
+- 支持 `.env`、环境变量和 macOS Keychain 三种凭据来源，不把密钥写入代码
 
 ## 环境要求
 
-- macOS（使用内置 `security` 命令读取 Keychain）
+- macOS（可选，仅在未提供环境变量时使用内置 `security` 命令读取 Keychain）
 - Python 3.10+
 - [`uv`](https://docs.astral.sh/uv/)
 - `ffprobe`（通常随 FFmpeg 安装）
@@ -23,13 +23,31 @@
 依赖由 `uv` 临时提供，无需修改全局 Python 环境：
 
 ```bash
-uv run --with cos-python-sdk-v5 --with dashscope --with requests \
+uv run --with cos-python-sdk-v5 --with dashscope --with requests --with python-dotenv \
   python scripts/transcribe_videos.py --help
 ```
 
 ## 配置凭据
 
-先在 macOS Keychain 中创建以下 generic password 项。默认 service 名称如下，账号默认为当前 macOS 用户名：
+推荐复制示例文件并编辑本地 `.env`：
+
+```bash
+cp .env.example .env
+```
+
+填写以下变量：
+
+```dotenv
+DASHSCOPE_API_KEY=你的 DashScope API Key
+COS_SECRET_ID=你的腾讯云 COS SecretId
+COS_SECRET_KEY=你的腾讯云 COS SecretKey
+COS_BUCKET_NAME=你的私有 COS bucket 名
+COS_REGION=ap-shanghai
+```
+
+`.env` 已被 Git 忽略，绝不要提交真实密钥。也可以直接在 shell 中导出同名环境变量；环境变量和 `.env` 优先于 macOS Keychain。
+
+如果没有提供环境变量，脚本会回退到 macOS Keychain。默认 service 名称如下，账号默认为当前 macOS 用户名：
 
 | 用途 | Keychain service |
 | --- | --- |
@@ -61,7 +79,7 @@ dry-run 不读取云端凭据、不上传媒体，只检查文件并生成费用
 export COS_BUCKET_NAME="你的私有 COS bucket 名"
 export COS_REGION="你的 COS region，例如 ap-shanghai"
 
-uv run --with cos-python-sdk-v5 --with dashscope --with requests \
+uv run --with cos-python-sdk-v5 --with dashscope --with requests --with python-dotenv \
   python scripts/transcribe_videos.py \
   ~/Downloads/meetings \
   --cos-bucket "$COS_BUCKET_NAME" \
@@ -76,7 +94,7 @@ uv run --with cos-python-sdk-v5 --with dashscope --with requests \
 确认用户拥有媒体或已获授权，并确认上传和转录可能产生费用后，再执行正式任务：
 
 ```bash
-uv run --with cos-python-sdk-v5 --with dashscope --with requests \
+uv run --with cos-python-sdk-v5 --with dashscope --with requests --with python-dotenv \
   python scripts/transcribe_videos.py \
   ~/Downloads/meeting-1.mp4 ~/Downloads/meeting-2.mp3 \
   --cos-bucket "$COS_BUCKET_NAME" \

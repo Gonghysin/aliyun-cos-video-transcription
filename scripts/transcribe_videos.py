@@ -18,7 +18,10 @@ from typing import Any
 
 import requests
 from dashscope.audio.asr.transcription import Transcription
+from dotenv import load_dotenv
 from qcloud_cos import CosConfig, CosS3Client
+
+load_dotenv()
 
 MEDIA_SUFFIXES = {".aac", ".flac", ".m4a", ".mkv", ".mov", ".mp3", ".mp4", ".wav", ".webm"}
 KEYCHAIN_SERVICES = {
@@ -57,7 +60,26 @@ def keychain_secret(service: str) -> str:
 
 
 def load_credentials() -> Credentials:
-    return Credentials(**{name: keychain_secret(service) for name, service in KEYCHAIN_SERVICES.items()})
+    values = {}
+    environment_names = {
+        "dashscope_api_key": "DASHSCOPE_API_KEY",
+        "cos_secret_id": "COS_SECRET_ID",
+        "cos_secret_key": "COS_SECRET_KEY",
+    }
+    for name, service in KEYCHAIN_SERVICES.items():
+        environment_name = environment_names[name]
+        value = os.environ.get(environment_name)
+        if value:
+            values[name] = value
+            continue
+        try:
+            values[name] = keychain_secret(service)
+        except (OSError, subprocess.CalledProcessError) as error:
+            raise RuntimeError(
+                f"Missing {environment_name}. Set it in the environment or a local .env file, "
+                f"or configure the macOS Keychain service {service!r}."
+            ) from error
+    return Credentials(**values)
 
 
 def media_duration_seconds(path: Path) -> float:

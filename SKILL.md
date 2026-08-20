@@ -1,20 +1,26 @@
 ---
 name: aliyun-cos-video-transcription
 description: Transcribe one or many local meeting recordings, interviews, courses, or videos in parallel by uploading them temporarily to a private Tencent COS bucket and calling Alibaba Cloud DashScope file transcription. Use this skill whenever the user asks to batch transcribe local audio/video, generate timed TXT/SRT/JSON transcripts, manage parallel transcription jobs, or track estimated and billed transcription costs.
-compatibility: Requires macOS Keychain, uv, ffprobe, a private Tencent COS bucket, DashScope access, and network access.
+compatibility: Requires uv, ffprobe, a private Tencent COS bucket, DashScope access, and network access. macOS Keychain is optional when credentials are supplied through environment variables or .env.
 ---
 
 # Tencent COS + DashScope Batch Transcription
 
-Use the bundled `scripts/transcribe_videos.py` for deterministic batch work. It reads credentials from macOS Keychain, uploads each input to a private COS bucket, creates a short-lived signed URL, calls DashScope asynchronous file transcription, exports results locally, and deletes the temporary COS object by default.
+Use the bundled `scripts/transcribe_videos.py` for deterministic batch work. It loads credentials from environment variables or a local `.env` file first, then falls back to macOS Keychain when a variable is missing. It uploads each input to a private COS bucket, creates a short-lived signed URL, calls DashScope asynchronous file transcription, exports results locally, and deletes the temporary COS object by default.
 
 ## Credentials
 
-Before submitting work, confirm the required Keychain items exist. Do not ask users to paste secret values into chat. The default service names are generic and can be overridden with the environment variables listed below.
+Copy `.env.example` to `.env` and replace the placeholders, or export these variables in the shell. Do not ask users to paste secret values into chat. The script checks these variables before trying macOS Keychain:
 
-- `DASHSCOPE_API_KEY` Keychain service: `DASHSCOPE_API_KEY`
-- `COS_SECRET_ID` Keychain service: `COS_SECRET_ID`
-- `COS_SECRET_KEY` Keychain service: `COS_SECRET_KEY`
+```bash
+cp .env.example .env
+```
+
+- `DASHSCOPE_API_KEY`: DashScope API key
+- `COS_SECRET_ID`: Tencent COS SecretId
+- `COS_SECRET_KEY`: Tencent COS SecretKey
+
+When these variables are omitted, the default macOS Keychain service names are `DASHSCOPE_API_KEY`, `COS_SECRET_ID`, and `COS_SECRET_KEY`.
 
 Override service names when an existing Keychain uses different labels:
 
@@ -41,7 +47,7 @@ Actual billing reconciliation additionally needs separate read-only billing cred
 Run a local-only estimate for every supported media file under a directory:
 
 ```bash
-uv run --with cos-python-sdk-v5 --with dashscope --with requests \
+uv run --with cos-python-sdk-v5 --with dashscope --with requests --with python-dotenv \
   python scripts/transcribe_videos.py \
   ~/Downloads/meetings \
   --cos-bucket "${COS_BUCKET_NAME}" \
@@ -53,7 +59,7 @@ uv run --with cos-python-sdk-v5 --with dashscope --with requests \
 Submit up to two files concurrently and write local exports:
 
 ```bash
-uv run --with cos-python-sdk-v5 --with dashscope --with requests \
+uv run --with cos-python-sdk-v5 --with dashscope --with requests --with python-dotenv \
   python scripts/transcribe_videos.py \
   ~/Downloads/meeting-1.mp4 ~/Downloads/meeting-2.mp4 \
   --cos-bucket "${COS_BUCKET_NAME}" \
